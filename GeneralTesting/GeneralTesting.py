@@ -331,7 +331,7 @@ if __name__ == "__main__":
     if not len(sys.argv) == 6:
         print >> sys.stderr, \
             "Invalid number of arguments. Usage: general_testing.py <Confidence Normality, float> <Collection To Retrieve, string> " \
-            "<Data Type, string> <mongoDocId, string>"
+            "<Data Type, string> <mongoIP, String> <mongoDocId, string>"
         exit(-1)
 
     if not any(sys.argv[1] in s for s in ('15.0', '10.0', '5.0', '2.5', '1.0')):

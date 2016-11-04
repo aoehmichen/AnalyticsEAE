@@ -320,9 +320,11 @@ listofAlgorithms = ["SVM", "LogisticRegressionWithLBFGS", "LogisticRegressionWit
 if __name__ == "__main__":
 
     # We check that the arguments are well formed
-    if not (8 <= len(sys.argv) <= 11):
+    if not len(sys.argv) == 11:
         print >> sys.stderr, \
-            "Invalid number of arguments. Usage: CrossValidation.py <dataFile, string>  <AlgorithmToUse, string> <featuresFile, string> <kfold, float> <numberOfResampling, int> <numberOfResampling, float>"
+            "Invalid number of arguments. Usage: CrossValidation.py <dataFile, string>  <AlgorithmToUse, string> " \
+            "<featuresFile, string> <kfold, float> <numberOfResampling, int> <numberOfFeaturesToRemove, float> " \
+            "<doEnrichement, Boolean> <mongoDocPathwayEnrichementId, string> <mongoIP, String> <mongoDocId, string>"
         exit(-1)
 
     if not any(sys.argv[3] in s for s in listofAlgorithms):
@@ -337,7 +339,7 @@ if __name__ == "__main__":
     algorithmToUse = sys.argv[3]
     kfold = float(sys.argv[4])
     resampling = int(sys.argv[5])
-    numberOfFeaturesToremove = float(sys.argv[6])
+    numberOfFeaturesToRemove = float(sys.argv[6])
     doEnrichement = str_to_bool(sys.argv[7])
     mongoDocIdPE = str(sys.argv[8])
     mongoIP = str(sys.argv[9])
@@ -364,7 +366,7 @@ if __name__ == "__main__":
         cvsetsize = CVTest.count()
         trainingSetsize = CVTraining.count()
 
-        models, performanceCurve = crossval[algorithmToUse](CVTraining, CVTest, featuresList, numberOfFeaturesToremove)
+        models, performanceCurve = crossval[algorithmToUse](CVTraining, CVTest, featuresList, numberOfFeaturesToRemove)
 
         print("CV test set size = " + str(cvsetsize))
         print("CV training set size = " + str(trainingSetsize))
@@ -387,7 +389,7 @@ if __name__ == "__main__":
             print "/***********************************************/"
 
         ## we retrieve the mongo client and database for Pathway enrichment
-        db = MongoClient('mongodb://'+ mongoIP +'/').eae
+        db = MongoClient('mongodb://' + mongoIP + '/').eae
         db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
         cvCollection = db.CrossValidation
 
@@ -402,8 +404,8 @@ if __name__ == "__main__":
                "AlgorithmUsed": algorithmToUse,
                "kfold": kfold,
                "Resampling": resampling,
-               "WorkflowSpecificParameters": algorithmToUse + " " + str(kfold) + " " + str(resampling) + " " + str(numberOfFeaturesToremove),
-               "NumberOfFeaturesToRemove": numberOfFeaturesToremove,
+               "WorkflowSpecificParameters": algorithmToUse + " " + str(kfold) + " " + str(resampling) + " " + str(numberOfFeaturesToRemove),
+               "NumberOfFeaturesToRemove": numberOfFeaturesToRemove,
                "EndTime": datetime.now(),
                "Status": "completed"}
 

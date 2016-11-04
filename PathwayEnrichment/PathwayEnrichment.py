@@ -131,9 +131,9 @@ if __name__ == "__main__":
     sc = SparkContext(conf=conf)
 
     # We check that the arguments are well formed
-    if not len(sys.argv) == 3:
+    if not len(sys.argv) == 4:
         print >> sys.stderr, \
-            "Invalid number of arguments. Usage: PathwayEnrichment.py <CorrectionToUse, String> <mongoDocId, String>"
+            "Invalid number of arguments. Usage: PathwayEnrichment.py <CorrectionToUse, String> <mongoIP, String> <mongoDocId, String>"
         exit(-1)
 
     # We load the list genes Symbols

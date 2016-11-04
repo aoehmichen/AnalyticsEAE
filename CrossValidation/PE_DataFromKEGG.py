@@ -98,18 +98,3 @@ class HolmBonferroni(AbstractCorrection):
                 if p * 1. / lp < self.a:
                     yield (i, lp)
             lp -= len(idxs)
-
-#     http://rest.kegg.jp/link/genes/
-# http://rest.kegg.jp/find/genes/NPC1L1 -> renvoie le nom dans KEGG du gene. ici hsa:29881. Permet de convertir un nom NCBI en une ref comprehensible par KEGG.
-#
-# http://rest.kegg.jp/link/hsa/hsa00010 -> donne la liste des genes associes au pathway hsa0010
-#
-# http://rest.kegg.jp/get/hsa00010 -> retourne toutes les infos liees au pathway.
-#
-#
-# http://www.genome.jp/dbget-bin/www_bget?hsa:29881
-#
-# /conv/eco/ncbi-geneid 	  	conversion from NCBI GeneID to KEGG ID for E. coli genes
-#
-# Fishers Exact Test ( option of choosing Bonferroni corrections for multiple comparisons)
-# https://sites.google.com/a/cidms.org/ipavs_tutorials/pathway-analysis-visualization-and-data-manipulation-tools/pathway-enrichment-algorithms
