@@ -469,7 +469,7 @@ if __name__ == "__main__":
 
 
     # We send back to Mongo cache the results of the computation to be displayed into transmart.
-    db = MongoClient('mongodb://' + mongoURL + '/').eae
+    db = MongoClient('mongodb://' + mongoIP + '/').eae
     db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
     gtCollection = db.GeneralTesting
 
