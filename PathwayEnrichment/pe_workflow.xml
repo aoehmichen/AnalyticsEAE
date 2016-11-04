@@ -1,0 +1,30 @@
+<workflow-app xmlns='uri:oozie:workflow:0.5' name='CrossVal'>
+    <start to='spark-node' />
+
+    <action name='spark-node'>
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <mkdir path="${jobOutput}"/>
+            </prepare>
+            <master>yarn-client</master>
+            <mode>client</mode>
+            <name>PathwayEnrichment</name>
+            <jar>pe.py</jar>
+            <spark-opts>--py-files CrossValidation.zip --num-executors 2 --driver-memory 1024m --executor-memory 512m --executor-cores 1</spark-opts>
+            <arg>${geneList}</arg>
+            <arg>${correction}</arg>
+            <arg>${mongoDocId}</arg>
+        </spark>
+        <ok to="end" />
+        <error to="fail" />
+    </action>
+
+    <kill name="fail">
+        <message>Workflow failed, error
+            message[${wf:errorMessage(wf:lastErrorNode())}]
+        </message>
+    </kill>
+    <end name='end' />
+</workflow-app>
