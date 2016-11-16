@@ -156,7 +156,10 @@ def anovaTest(values):
     features = [x[0] for x in values]
     values = [x[1] for x in values]
     anovaTest = f_oneway(*values)
-    return features, anovaTest
+    if numpy.isnan(anovaTest[0]):
+        return features, ("NaN", "NaN")
+    else:
+        return features, anovaTest
 
 def do_onewayANOVA(normalData):
     #  Tests the null hypothesis that samples in two or more groups are drawn from populations with the same mean values
