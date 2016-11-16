@@ -441,7 +441,7 @@ if __name__ == "__main__":
     heatmap = ax.pcolor(matrice, cmap=plt.cm.Blues, alpha=0.8)
     # Format
     fig = plt.gcf()
-    fig.set_size_inches(100, 100)
+    fig.set_size_inches(50, 50)
     # turn off the frame
     ax.set_frame_on(False)
     # put the major ticks at the middle of each cell
