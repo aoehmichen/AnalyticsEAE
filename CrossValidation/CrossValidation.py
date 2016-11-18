@@ -10,9 +10,7 @@ from bson.objectid import ObjectId
 from pyspark import SparkConf, SparkContext
 from pyspark.mllib.classification import LogisticRegressionWithSGD, LogisticRegressionWithLBFGS, SVMWithSGD, SVMModel
 from pyspark.mllib.regression import LabeledPoint, LinearRegressionWithSGD, LassoWithSGD
-from pyspark.mllib.recommendation import ALS
 
-from ALSBio import Rating
 from PathwayEnrichment import PathwayEnrichment
 
 __author__ = 'Axel Oehmichen'
@@ -99,11 +97,6 @@ def removeFeatures(TrainingSet, ValidatingSet, featuresList, ratioOfFeaturesTore
 # Split the data                    #
 #####################################
 
-def split_ALS(data, trainingSetSize, testSetSize, randomSeed):
-    CVTest, CVTraining = data.randomSplit([trainingSetSize, testSetSize], randomSeed)
-    return CVTest, CVTraining
-
-
 def split_LinearMethods(data, trainingSetSize, testSetSize, randomSeed):
     # data = data.map(parsePoint)
     CVTest, CVTraining = data.randomSplit([trainingSetSize, testSetSize], randomSeed)
@@ -114,20 +107,6 @@ def split_LinearMethods(data, trainingSetSize, testSetSize, randomSeed):
 # Test the fitness of the models    #
 #####################################
 
-def fitness_ALS(ValidatingSet, models):
-    # evaluate the ALS model
-    # Evaluate the model on training data
-    validationRatings = ValidatingSet.map(lambda l: l.split(',')).map(
-        lambda l: Rating(int(l[0]), int(l[1]), float(l[2])))
-    testdata = validationRatings.map(lambda p: (p[0], p[1]))
-    for model in models:
-        predictions = model.predictAll(testdata).map(lambda r: ((r[0], r[1]), r[2]))
-        ratesAndPreds = validationRatings.map(lambda r: ((r[0], r[1]), r[2])).join(predictions)
-        MSE = ratesAndPreds.map(lambda r: (r[1][0] - r[1][1]) ** 2).reduce(lambda x, y: x + y) / ratesAndPreds.count()
-        print("Mean Squared Error = " + str(MSE))
-    return 0
-
-
 def fitness_SVM(ValidatingSet, model):
     # evaluate the SVM model
     labelsAndPreds = ValidatingSet.map(lambda p: (p.label, model.predict(p.features)))
@@ -137,75 +116,24 @@ def fitness_SVM(ValidatingSet, model):
     trainErr = countLabels / totalCount
     return trainErr
 
-
-def fitness_LogisticRegressionWithLBFGS(ValidatingSet, models):
+def fitness_LinearMethods(ValidatingSet, model):
     # Evaluate the model on training data
-    # parsedData = ValidatingSet.map(parsePoint)
-    parsedData = ValidatingSet
-    for model in models:
-        labelsAndPreds = parsedData.map(lambda p: (p.label, model.predict(p.features)))
-        trainErr = labelsAndPreds.filter(lambda (v, p): v != p).count() / float(parsedData.count())
-        print("Training Error = " + str(trainErr))
-    return 0
-
-
-def fitness_LogisticRegressionWithSGD(ValidatingSet, models):
-    # Evaluate the model on training data
-    # parsedData = ValidatingSet.map(parsePoint)
-    parsedData = ValidatingSet
-    for model in models:
-        labelsAndPreds = parsedData.map(lambda p: (p.label, model.predict(p.features)))
-        trainErr = labelsAndPreds.filter(lambda (v, p): v != p).count() / float(parsedData.count())
-        print("Training Error = " + str(trainErr))
-    return 0
-
-
-def fitness_LinearRegressionWithSGD(ValidatingSet, models):
-    # Evaluate the model on training data
-    # parsedData = ValidatingSet.map(parsePoint)
-    parsedData = ValidatingSet
-    for model in models:
-        valuesAndPreds = parsedData.map(lambda p: (p.label, model.predict(p.features)))
-        MSE = valuesAndPreds.map(lambda (v, p): (v - p) ** 2).reduce(lambda x, y: x + y) / valuesAndPreds.count()
-        print("Training Error = " + str(MSE))
-    return 0
-
-
-def fitness_LassoWithSGD(ValidatingSet, models):
-    # Evaluate the model on training data
-    # parsedData = ValidatingSet.map(parsePoint)
-    parsedData = ValidatingSet
-    for model in models:
-        valuesAndPreds = parsedData.map(lambda p: (p.label, model.predict(p.features)))
-        MSE = valuesAndPreds.map(lambda (v, p): (v - p) ** 2).reduce(lambda x, y: x + y) / valuesAndPreds.count()
-        print("Training Error = " + str(MSE))
-    return 0
+    labelsAndPreds = ValidatingSet.map(lambda p: (p.label, model.predict(p.features)))
+    countLabels = labelsAndPreds.map(lambda (v, p): 1 if v != p else 0).reduce(add)
+    totalCount = float(ValidatingSet.count())
+    trainErr = countLabels / totalCount
+    return trainErr
 
 
 #####################################
 # Generate the models               #
 #####################################
 
-def do_ALS(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
-    # Build the recommendation model using Alternating Least Squares
-    trainingRatings = TrainingSet.map(lambda l: l.split(',')).map(lambda l: Rating(int(l[0]), int(l[1]), float(l[2])))
-    # Build the model
-    rank = 10
-    numIterations = 20
-    # numberOfFeatures = TrainingSet.first().map(lambda line: len(line.split(' '))).count()
-    numberOfFeatures = 6
-    while (numberOfFeatures > 5):
-        model = ALS.train(trainingRatings, rank, numIterations)
-        numberOfFeatures -= round(numberOfFeatures * numberOfFeaturesToremove)
-        yield model
-
-
 def do_SVM(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
     tripletResultList = []
     parsedData = TrainingSet.map(parsePoint)
     parsedValidatingSet = ValidatingSet.map(parsePoint)
     numberOfFeatures = len(featuresList)
-    # Build the model
 
     # We build the SVM model
     model = SVMWithSGD.train(parsedData)
@@ -245,47 +173,160 @@ def do_SVM(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
 
 def do_LogisticRegressionWithLBFGS(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
     parsedData = TrainingSet.map(parsePoint)
-    # parsedData = TrainingSet
-    numberOfFeatures = 6
-    # Build the model
-    while (numberOfFeatures > 5):
-        model = LogisticRegressionWithLBFGS.train(parsedData)
-        numberOfFeatures -= round(numberOfFeatures * numberOfFeaturesToremove)
+    parsedValidatingSet = ValidatingSet.map(parsePoint)
+    numberOfFeatures = len(featuresList)
 
-        yield model
+    # Build the model
+    model = LogisticRegressionWithLBFGS.train(parsedData)
+    trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+    featuresStr = [str(x) for x in featuresList]
+    tripletResult = [[featuresStr, model, trainErr]]
+
+    bestModels = tripletResult
+    performanceCurve = [(numberOfFeatures, trainErr)]
+    while (numberOfFeatures > 100):
+        parsedData, parsedValidatingSet, featuresList, numberOfFeatures = removeFeatures(parsedData,
+                                                                                         parsedValidatingSet,
+                                                                                         featuresList,
+                                                                                         numberOfFeaturesToremove)
+
+        # We build the model
+        model = LogisticRegressionWithLBFGS.train(parsedData)
+        trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+        featuresStr = [str(x) for x in featuresList]
+
+        print (trainErr, bestModels[0][2])
+        print len(bestModels)
+        print len(featuresStr)
+
+        performanceCurve.append((numberOfFeatures, trainErr))
+        if bestModels[0][2] < trainErr:
+            mod = [featuresStr, model, trainErr]
+            bestModels = [mod]
+        elif round(bestModels[0][2], 4) == round(trainErr, 4):
+            mod = [featuresStr, model, trainErr]
+            bestModels.append(mod)
+
+    return bestModels, performanceCurve
 
 
 def do_LogisticRegressionWithSGD(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
-    # parsedData = TrainingSet.map(parsePoint)
-    parsedData = TrainingSet
-    numberOfFeatures = 6
+    parsedData = TrainingSet.map(parsePoint)
+    parsedValidatingSet = ValidatingSet.map(parsePoint)
+    numberOfFeatures = len(featuresList)
+
     # Build the model
-    while (numberOfFeatures > 5):
+    model = LogisticRegressionWithSGD.train(parsedData)
+    trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+    featuresStr = [str(x) for x in featuresList]
+    tripletResult = [[featuresStr, model, trainErr]]
+
+    bestModels = tripletResult
+    performanceCurve = [(numberOfFeatures, trainErr)]
+    while (numberOfFeatures > 100):
+        parsedData, parsedValidatingSet, featuresList, numberOfFeatures = removeFeatures(parsedData,
+                                                                                         parsedValidatingSet,
+                                                                                         featuresList,
+                                                                                         numberOfFeaturesToremove)
+
+        # We build the model
         model = LogisticRegressionWithSGD.train(parsedData)
-        numberOfFeatures -= round(numberOfFeatures * numberOfFeaturesToremove)
-        yield model
+        trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+        featuresStr = [str(x) for x in featuresList]
+
+        print (trainErr, bestModels[0][2])
+        print len(bestModels)
+        print len(featuresStr)
+
+        performanceCurve.append((numberOfFeatures, trainErr))
+        if bestModels[0][2] < trainErr:
+            mod = [featuresStr, model, trainErr]
+            bestModels = [mod]
+        elif round(bestModels[0][2], 4) == round(trainErr, 4):
+            mod = [featuresStr, model, trainErr]
+            bestModels.append(mod)
+
+    return bestModels, performanceCurve
 
 
 def do_LinearRegressionWithSGD(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
-    # parsedData = TrainingSet.map(parsePoint)
-    parsedData = TrainingSet
-    numberOfFeatures = 6
+    parsedData = TrainingSet.map(parsePoint)
+    parsedValidatingSet = ValidatingSet.map(parsePoint)
+    numberOfFeatures = len(featuresList)
+
     # Build the model
-    while (numberOfFeatures > 5):
+    model = LinearRegressionWithSGD.train(parsedData)
+    trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+    featuresStr = [str(x) for x in featuresList]
+    tripletResult = [[featuresStr, model, trainErr]]
+
+    bestModels = tripletResult
+    performanceCurve = [(numberOfFeatures, trainErr)]
+    while (numberOfFeatures > 100):
+
+        parsedData, parsedValidatingSet, featuresList, numberOfFeatures = removeFeatures(parsedData,
+                                                                                         parsedValidatingSet,
+                                                                                         featuresList,
+                                                                                         numberOfFeaturesToremove)
+
+        # We build the model
         model = LinearRegressionWithSGD.train(parsedData)
-        numberOfFeatures -= round(numberOfFeatures * numberOfFeaturesToremove)
-        yield model
+        trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+        featuresStr = [str(x) for x in featuresList]
+
+        print (trainErr, bestModels[0][2])
+        print len(bestModels)
+        print len(featuresStr)
+
+        performanceCurve.append((numberOfFeatures, trainErr))
+        if bestModels[0][2] < trainErr:
+            mod = [featuresStr, model, trainErr]
+            bestModels = [mod]
+        elif round(bestModels[0][2], 4) == round(trainErr, 4):
+            mod = [featuresStr, model, trainErr]
+            bestModels.append(mod)
+
+    return bestModels, performanceCurve
 
 
 def do_LassoWithSGD(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesToremove):
-    # parsedData = TrainingSet.map(parsePoint)
-    parsedData = TrainingSet
-    numberOfFeatures = 6
+    parsedData = TrainingSet.map(parsePoint)
+    parsedValidatingSet = ValidatingSet.map(parsePoint)
+    numberOfFeatures = len(featuresList)
+
     # Build the model
-    while (numberOfFeatures > 5):
+    model = LassoWithSGD.train(parsedData)
+    trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+    featuresStr = [str(x) for x in featuresList]
+    tripletResult = [[featuresStr, model, trainErr]]
+
+    bestModels = tripletResult
+    performanceCurve = [(numberOfFeatures, trainErr)]
+    while (numberOfFeatures > 100):
+
+        parsedData, parsedValidatingSet, featuresList, numberOfFeatures = removeFeatures(parsedData,
+                                                                                         parsedValidatingSet,
+                                                                                         featuresList,
+                                                                                         numberOfFeaturesToremove)
+
+        # We build the model
         model = LassoWithSGD.train(parsedData)
-        numberOfFeatures -= round(numberOfFeatures * numberOfFeaturesToremove)
-        yield model
+        trainErr = fitness_LinearMethods(parsedValidatingSet, model)
+        featuresStr = [str(x) for x in featuresList]
+
+        print (trainErr, bestModels[0][2])
+        print len(bestModels)
+        print len(featuresStr)
+
+        performanceCurve.append((numberOfFeatures, trainErr))
+        if bestModels[0][2] < trainErr:
+            mod = [featuresStr, model, trainErr]
+            bestModels = [mod]
+        elif round(bestModels[0][2], 4) == round(trainErr, 4):
+            mod = [featuresStr, model, trainErr]
+            bestModels.append(mod)
+
+    return bestModels, performanceCurve
 
 
 #####################################
@@ -293,7 +334,6 @@ def do_LassoWithSGD(TrainingSet, ValidatingSet, featuresList, numberOfFeaturesTo
 #####################################
 
 splitDatasets = {
-    'ALS': split_ALS,
     'SVM': split_LinearMethods,
     'LogisticRegressionWithLBFGS': split_LinearMethods,
     'LogisticRegressionWithSGD': split_LinearMethods,
@@ -302,7 +342,6 @@ splitDatasets = {
 }
 
 crossval = {
-    'ALS': do_ALS,
     'SVM': do_SVM,
     'LogisticRegressionWithLBFGS': do_LogisticRegressionWithLBFGS,
     'LogisticRegressionWithSGD': do_LogisticRegressionWithSGD,
@@ -315,7 +354,7 @@ crossval = {
 #####################################
 
 listofAlgorithms = ["SVM", "LogisticRegressionWithLBFGS", "LogisticRegressionWithSGD", "LinearRegressionWithSGD",
-                    "LassoWithSGD", "ALS"]
+                    "LassoWithSGD"]
 
 if __name__ == "__main__":
 
@@ -330,7 +369,7 @@ if __name__ == "__main__":
     if not any(sys.argv[3] in s for s in listofAlgorithms):
         print >> sys.stderr, \
             "The algorithm requested is not available. The algorithms available for the Cross Validation are:", listofAlgorithms[
-                                                                                                                0:7]
+                                                                                                                0:5]
         exit(-1)
 
     # We fill the required variables
@@ -363,13 +402,13 @@ if __name__ == "__main__":
 
         # Load and parse the data
         CVTest, CVTraining = splitDatasets[algorithmToUse](data, trainingSetSize, testSetSize, randomSeed)
-        cvsetsize = CVTest.count()
-        trainingSetsize = CVTraining.count()
+        cvTestSize = CVTest.count()
+        trainingSetSize = CVTraining.count()
 
         models, performanceCurve = crossval[algorithmToUse](CVTraining, CVTest, featuresList, numberOfFeaturesToRemove)
 
-        print("CV test set size = " + str(cvsetsize))
-        print("CV training set size = " + str(trainingSetsize))
+        print("CV test set size = " + str(cvTestSize))
+        print("CV training set size = " + str(trainingSetSize))
 
         bestModels = [(models[0][0], models[0][1], 1)]
 
