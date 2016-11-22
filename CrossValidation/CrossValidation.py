@@ -431,9 +431,7 @@ if __name__ == "__main__":
         db = MongoClient('mongodb://' + mongoIP + '/').eae
         db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
         cvCollection = db.CrossValidation
-
         smallestBestModel = bestModels[-1]
-        # interesting note on the side If I import json before a Spark compute it blows a fuse and fails the computation!?
 
         doc = {"ModelFeatures": smallestBestModel[0],
                "ModelWeights": smallestBestModel[1].weights.toArray().tolist(),
