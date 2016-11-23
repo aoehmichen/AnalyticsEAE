@@ -1,6 +1,6 @@
 # AnalyticsEAE
 
-The analytics eAE project is part of the [eTRIKS Analytical Environement (eAE)](https://eae.doc.ic.ac.uk/) project.
+The analytics eAE project is part of the [eTRIKS Analytical Environement (eAE)](http://eae.doc.ic.ac.uk/) project.
 
 This project contains all the publicly available analytics which are part of the 1.0 release of the project.
 
