@@ -429,7 +429,7 @@ if __name__ == "__main__":
 
         ## we retrieve the mongo client and database for Pathway enrichment
         db = MongoClient('mongodb://' + mongoIP + '/').eae
-        db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
+        #db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
         cvCollection = db.CrossValidation
         smallestBestModel = bestModels[-1]
 

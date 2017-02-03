@@ -143,7 +143,7 @@ if __name__ == "__main__":
 
     ## we retrieve the mongo client and database for Pathway enrichment
     db = MongoClient('mongodb://' + mongoIP +'/').eae
-    db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
+    #db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
     peCollection = db.PathwayEnrichment
     docId = ObjectId(mongoDocId)
     document = peCollection.find_one({'_id': docId})

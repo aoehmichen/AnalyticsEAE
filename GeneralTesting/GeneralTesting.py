@@ -360,7 +360,7 @@ if __name__ == "__main__":
 
     # Method to retrieve from Mongo
     db_studies = MongoClient('mongodb://' + mongoIP + '/').studies
-    db_studies.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
+    #db_studies.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
     gtCollection = db_studies[collectionToRetrieve]
 
     # We retirve the data from Mongo and paralize it for Spark
@@ -473,7 +473,7 @@ if __name__ == "__main__":
 
     # We send back to Mongo cache the results of the computation to be displayed into transmart.
     db = MongoClient('mongodb://' + mongoIP + '/').eae
-    db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
+    #db.authenticate('eae', 'eae', mechanism='SCRAM-SHA-1')
     gtCollection = db.GeneralTesting
 
     # We store the image into mongo filesystem
